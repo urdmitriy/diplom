@@ -10,7 +10,14 @@ typedef struct {
     uint8_t humidity;
 } data_sensor_t;
 
+static int _pin_sensor;
+
 void dht11_init(int pin_sensor);
-void readSensors(data_sensor_t * data);
+uint8_t dht11_wait_line(uint8_t waitValue);
+void dht11_read(data_sensor_t * data);
+void dht11_switch_pin_to_in (void );
+void dht11_switch_pin_to_out (void );
+uint8_t dht11_read_word(void );
+
 
 #endif //DIPLOM_ESP32_DHT11_H

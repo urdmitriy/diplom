@@ -5,13 +5,15 @@
 #ifndef DIPLOM_ESP32_LEDS_H
 #define DIPLOM_ESP32_LEDS_H
 
-#define LED_RED 3
-#define LED_GREEN 4
-#define LED_BLUE 5
-#define LED_YELLOW 18
-#define LED_WHITE 19
+typedef enum {
+ LED_RED = 3,
+ LED_GREEN = 4,
+ LED_BLUE = 5,
+ LED_YELLOW = 18,
+ LED_WHITE = 19,
+} leds_e;
 
 void leds_init();
-void leds_flash(int led, int time);
+void leds_flash(leds_e led, int time);
 
 #endif //DIPLOM_ESP32_LEDS_H
