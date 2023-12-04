@@ -15,8 +15,6 @@ void app_main(void)
 {
 
     leds_init();
-    dht11_init(PIN_SENSOR);
-
 
 //    //Initialize NVS
 //    esp_err_t ret = nvs_flash_init();
@@ -39,9 +37,9 @@ void app_main(void)
 //    ESP_ERROR_CHECK(esp_netif_init());
 //
 //    mqtt_app_start();
-//    dht11_init(PIN_SENSOR);
 
-    while (1){
+    dht11_init(PIN_SENSOR);
+    dht11_start_task();
 
-    }
+    while (1){ ; }
 }

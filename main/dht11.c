@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include "leds.h"
+#include "mqtt_esp.h"
 #include "dht11.h"
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
@@ -13,8 +14,7 @@
 
 void vTaskDht11( void * pvParameters )
 {
-    data_sensor_t data_sensor = {.humidity = 255, .temperature = 255};
-    ESP_LOGI("dht11", "Temperature = %d, humidity = %d", data_sensor.temperature, data_sensor.humidity);
+    data_sensor_t data_sensor = {.humidity = 128, .temperature = 128};
 
     for( ;; )
     {
@@ -25,14 +25,18 @@ void vTaskDht11( void * pvParameters )
         vTaskDelay(pdMS_TO_TICKS(20)); // стартовый импульс
         gpio_set_level(_pin_sensor, 1);
         dht11_switch_pin_to_in();
+
+        taskENTER_CRITICAL();
         dht11_wait_line(1); // ждем начало импульса ответа
         dht11_wait_line(0); // ждем окончания импульса ответа
         dht11_wait_line(1); //  ждем начала передачи данных
+        data_sensor.humidity = dht11_read_word();
+        data_sensor.temperature = (int8_t) dht11_read_word();
+        taskEXIT_CRITICAL();
 
-        data_sensor.humidity =  dht11_read_word();
-        data_sensor.temperature = (int8_t)dht11_read_word();
         ESP_LOGI("dht11", "Temperature = %d, humidity = %d", data_sensor.temperature, data_sensor.humidity);
         ESP_LOGI("dht11", "END task DHT11");
+        //esp_mqtt_client_publish(_mqtt_client, "urdmitriy/data", data_sensor, 0, 1, 0);
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }
@@ -41,7 +45,9 @@ void dht11_init(int pin_sensor) {
     _pin_sensor = pin_sensor;
     gpio_reset_pin(_pin_sensor);
     ESP_LOGI("DHT", "Pis sensor set to %d", _pin_sensor);
+}
 
+void dht11_start_task(void) {
     xTaskCreate( vTaskDht11, "DHT11", 8096, NULL, 1, NULL );
 }
 
