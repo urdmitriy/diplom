@@ -10,6 +10,13 @@ typedef struct {
     uint8_t humidity;
 } data_sensor_t;
 
+typedef enum {
+    DHT_FSM_START,
+    DHT_FSM_ANSWER_BEGIN,
+    DHT_FSM_ANSWER_END,
+    DHT_FSM_BEGIN_DATA_RCV,
+} fsm_dht_state_e;
+
 static int _pin_sensor;
 
 void dht11_init(int pin_sensor);

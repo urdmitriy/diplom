@@ -14,30 +14,46 @@
 
 void vTaskDht11( void * pvParameters )
 {
-    data_sensor_t data_sensor = {.humidity = 128, .temperature = 128};
-
+    data_sensor_t data_sensor = {.humidity = 127, .temperature = 127};
+    fsm_dht_state_e dht_state = DHT_FSM_START;
     for( ;; )
     {
-        ESP_LOGI("dht11", "Start task DHT11");
-        leds_flash(LED_YELLOW, 100);
-        dht11_switch_pin_to_out();
-        gpio_set_level(_pin_sensor, 0);
-        vTaskDelay(pdMS_TO_TICKS(20)); // стартовый импульс
-        gpio_set_level(_pin_sensor, 1);
-        dht11_switch_pin_to_in();
+        switch (dht_state) {
+            case DHT_FSM_START:
+                ESP_LOGI("dht11", "Start task DHT11");
+                leds_flash(LED_YELLOW, 100);
+                dht11_switch_pin_to_out();
+                gpio_set_level(_pin_sensor, 0);
+                vTaskDelay(pdMS_TO_TICKS(20)); // стартовый импульс
+                gpio_set_level(_pin_sensor, 1);
+                dht11_switch_pin_to_in();
+                dht_state = DHT_FSM_ANSWER_BEGIN;
+                ESP_LOGI("dht11", "dht_state = DHT_FSM_ANSWER_BEGIN");
+                break;
+            case DHT_FSM_ANSWER_BEGIN:
+                if (gpio_get_level(_pin_sensor) == 1) {
+                    dht_state = DHT_FSM_ANSWER_END;
+                    ESP_LOGI("dht11", "dht_state = DHT_FSM_ANSWER_END");
+                }
+                break;
+            case DHT_FSM_ANSWER_END:
+                if (gpio_get_level(_pin_sensor) == 0) {
+                    dht_state = DHT_FSM_BEGIN_DATA_RCV;
+                    ESP_LOGI("dht11", "dht_state = DHT_FSM_BEGIN_DATA_RCV");
+                }
+                break;
+            case DHT_FSM_BEGIN_DATA_RCV:
+                ESP_LOGI("dht11", "rcv data and sleep");
+                dht_state = DHT_FSM_START;
+                vTaskDelay(pdMS_TO_TICKS(2000));
+                break;
+        }
 
-        taskENTER_CRITICAL();
-        dht11_wait_line(1); // ждем начало импульса ответа
-        dht11_wait_line(0); // ждем окончания импульса ответа
-        dht11_wait_line(1); //  ждем начала передачи данных
-        data_sensor.humidity = dht11_read_word();
-        data_sensor.temperature = (int8_t) dht11_read_word();
-        taskEXIT_CRITICAL();
 
-        ESP_LOGI("dht11", "Temperature = %d, humidity = %d", data_sensor.temperature, data_sensor.humidity);
-        ESP_LOGI("dht11", "END task DHT11");
+//        ESP_LOGI("dht11", "Temperature = %d, humidity = %d", data_sensor.temperature, data_sensor.humidity);
+//        ESP_LOGI("dht11", "END task DHT11");
         //esp_mqtt_client_publish(_mqtt_client, "urdmitriy/data", data_sensor, 0, 1, 0);
-        vTaskDelay(pdMS_TO_TICKS(2000));
+
     }
 }
 
@@ -57,12 +73,6 @@ void dht11_switch_pin_to_in (void ){
 
 void dht11_switch_pin_to_out (void ){
     gpio_set_direction(_pin_sensor, GPIO_MODE_OUTPUT);
-}
-
-uint8_t dht11_wait_line(uint8_t waitValue){
-
-    while (gpio_get_level(_pin_sensor) == waitValue);
-    return 0;
 }
 
 uint8_t dht11_read_word(void ){
