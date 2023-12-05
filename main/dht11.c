@@ -7,10 +7,36 @@
 #include "mqtt_esp.h"
 #include "dht11.h"
 #include "driver/gpio.h"
+#include "driver/timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/timers.h"
 #include "esp_log.h"
+
+void dht11_init(int pin_sensor) {
+    _pin_sensor = pin_sensor;
+    gpio_reset_pin(_pin_sensor);
+    ESP_LOGI("DHT", "Pis sensor set to %d", _pin_sensor);
+    timer_config_t config_timer = {
+            .counter_dir = TIMER_COUNT_UP,
+            .divider = 40,
+            .auto_reload = TIMER_AUTORELOAD_EN,
+            .alarm_en = TIMER_ALARM_DIS,
+            .counter_en = TIMER_START};
+    timer_init(TIMER_GROUP_0, TIMER_0, &config_timer);
+}
+
+void dht11_start_task(void) {
+    xTaskCreate( vTaskDht11, "DHT11", 8096, NULL, 1, NULL );
+}
+
+void dht11_switch_pin_to_in (void ){
+    gpio_set_direction(_pin_sensor, GPIO_MODE_INPUT);
+}
+
+void dht11_switch_pin_to_out (void ){
+    gpio_set_direction(_pin_sensor, GPIO_MODE_OUTPUT);
+}
 
 void vTaskDht11( void * pvParameters )
 {
@@ -27,82 +53,46 @@ void vTaskDht11( void * pvParameters )
                 vTaskDelay(pdMS_TO_TICKS(20)); // стартовый импульс
                 gpio_set_level(_pin_sensor, 1);
                 dht11_switch_pin_to_in();
-                dht_state = DHT_FSM_ANSWER_BEGIN;
-                ESP_LOGI("dht11", "dht_state = DHT_FSM_ANSWER_BEGIN");
+                dht_state = DHT_FSM_ANSWER_IMPULSE_BEGIN;
+                ESP_LOGI("dht11", "dht_state = DHT_FSM_ANSWER_IMPULSE_BEGIN");
                 break;
-            case DHT_FSM_ANSWER_BEGIN:
+            case DHT_FSM_ANSWER_IMPULSE_BEGIN:
                 if (gpio_get_level(_pin_sensor) == 1) {
-                    dht_state = DHT_FSM_ANSWER_END;
-                    ESP_LOGI("dht11", "dht_state = DHT_FSM_ANSWER_END");
+                    dht_state = DHT_FSM_ANSWER_IMPULSE_END;
+                    ESP_LOGI("dht11", "dht_state = DHT_FSM_ANSWER_IMPULSE_END");
                 }
                 break;
-            case DHT_FSM_ANSWER_END:
+            case DHT_FSM_ANSWER_IMPULSE_END:
                 if (gpio_get_level(_pin_sensor) == 0) {
                     dht_state = DHT_FSM_BEGIN_DATA_RCV;
                     ESP_LOGI("dht11", "dht_state = DHT_FSM_BEGIN_DATA_RCV");
                 }
                 break;
             case DHT_FSM_BEGIN_DATA_RCV:
-                ESP_LOGI("dht11", "rcv data and sleep");
+                dht11_read(&data_sensor);
+                ESP_LOGI("test", "Temperature = %d, h = %d, crc = %d", data_sensor.temperature, data_sensor.humidity, data_sensor.crc);
+                //esp_mqtt_client_publish(_mqtt_client, "urdmitriy/data", data_sensor, 0, 1, 0);
                 dht_state = DHT_FSM_START;
                 vTaskDelay(pdMS_TO_TICKS(2000));
                 break;
         }
-
-
-//        ESP_LOGI("dht11", "Temperature = %d, humidity = %d", data_sensor.temperature, data_sensor.humidity);
-//        ESP_LOGI("dht11", "END task DHT11");
-        //esp_mqtt_client_publish(_mqtt_client, "urdmitriy/data", data_sensor, 0, 1, 0);
-
     }
 }
 
-void dht11_init(int pin_sensor) {
-    _pin_sensor = pin_sensor;
-    gpio_reset_pin(_pin_sensor);
-    ESP_LOGI("DHT", "Pis sensor set to %d", _pin_sensor);
-}
-
-void dht11_start_task(void) {
-    xTaskCreate( vTaskDht11, "DHT11", 8096, NULL, 1, NULL );
-}
-
-void dht11_switch_pin_to_in (void ){
-    gpio_set_direction(_pin_sensor, GPIO_MODE_INPUT);
-}
-
-void dht11_switch_pin_to_out (void ){
-    gpio_set_direction(_pin_sensor, GPIO_MODE_OUTPUT);
-}
-
-uint8_t dht11_read_word(void ){
-    uint16_t data = 0;
-    TickType_t time_start = pdTICKS_TO_MS(xTaskGetTickCount());
-
-    for (size_t i = 0; i < 16; i++)
-    {
-        dht11_wait_line(0); //ждем окончания "синхроимпульса"
-        dht11_wait_line(1); //wait 1 or 0
-
-        if (pdTICKS_TO_MS(xTaskGetTickCount()) - time_start > 40) { //Если импульс данных длиннее 40 (26-28) мкс, то бит = 1
-            data |= (1 << (15-i));
+void dht11_read(data_sensor_t* data){
+    taskENTER_CRITICAL(&my_spinlock);
+    uint64_t time_start, time_current;
+    timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &time_start);
+//        dht11_wait_line(0); //ждем окончания "синхроимпульса"
+//        dht11_wait_line(1); //wait 1 or 0
+    for (int i = 0; i < 5; ++i) {
+        for (int j = 0; j < 8; ++j) {
+            timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &time_current);
+            if (time_current - time_start > 40) { //Если импульс данных длиннее 40 (26-28) мкс, то бит = 1
+                *(((uint8_t *) data) + i) |= (uint8_t) (1 << (7 - j));
+            }
         }
-
     }
-    return (data >> 8); //если ошибки не было, выдаем старший байт
 
-}
-
-void dht11_read(data_sensor_t * data){
-    dht11_switch_pin_to_out();
-    gpio_set_level(_pin_sensor, 0);
-    vTaskDelay(pdMS_TO_TICKS(20)); // стартовый импульс
-    gpio_set_level(_pin_sensor, 1);
-    dht11_switch_pin_to_in();
-    dht11_wait_line(1); // ждем начало импульса ответа
-    dht11_wait_line(0); // ждем окончания импульса ответа
-    dht11_wait_line(1); //  ждем начала передачи данных
-
-    data->humidity = dht11_read_word();
-    data->temperature = dht11_read_word();
+    taskEXIT_CRITICAL(&my_spinlock);
 }
