@@ -14,19 +14,14 @@ TimerHandle_t timer_led_yellow, timer_led_white, timer_led_red,timer_led_green,t
 void TimerCallbackFunction(TimerHandle_t xTimer ){
     if (xTimer == timer_led_yellow) {
         gpio_set_level(LED_YELLOW, 0);
-        ESP_LOGI("LEDS", "LED YELLOW OFF");
     } else if (xTimer == timer_led_white) {
         gpio_set_level(LED_WHITE, 0);
-        ESP_LOGI("LEDS", "LED WHITE OFF");
     } else if (xTimer == timer_led_red) {
         gpio_set_level(LED_RED, 0);
-        ESP_LOGI("LEDS", "LED RED OFF");
     } else if (xTimer == timer_led_green) {
         gpio_set_level(LED_GREEN, 0);
-        ESP_LOGI("LEDS", "LED GREEN OFF");
     } else if (xTimer == timer_led_blue) {
         gpio_set_level(LED_BLUE, 0);
-        ESP_LOGI("LEDS", "LED BLUE OFF");
     }
 }
 
@@ -45,6 +40,10 @@ void leds_init(){
     gpio_set_direction(LED_WHITE, GPIO_MODE_OUTPUT);
 
     timer_led_yellow = xTimerCreate("timer led", pdMS_TO_TICKS(100), pdFALSE, "timer yellow", TimerCallbackFunction);
+    timer_led_white = xTimerCreate("timer led", pdMS_TO_TICKS(100), pdFALSE, "timer white", TimerCallbackFunction);
+    timer_led_red = xTimerCreate("timer led", pdMS_TO_TICKS(100), pdFALSE, "timer red", TimerCallbackFunction);
+    timer_led_green = xTimerCreate("timer led", pdMS_TO_TICKS(100), pdFALSE, "timer green", TimerCallbackFunction);
+    timer_led_blue = xTimerCreate("timer led", pdMS_TO_TICKS(100), pdFALSE, "timer blue", TimerCallbackFunction);
 
     ESP_LOGI("LEDS", "LED init end");
 }
@@ -77,7 +76,4 @@ void leds_flash(leds_e led, int time){
         default:
             break;
     }
-
-
-    ESP_LOGI("LEDS", "LED ON");
 }

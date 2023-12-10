@@ -6,8 +6,8 @@
 #define DIPLOM_ESP32_MQTT_ESP_H
 
 #include "mqtt_client.h"
-//esp_mqtt_client_handle_t _mqtt_client;
 
-void mqtt_app_start(void);
+
+void mqtt_app_start(esp_mqtt_client_handle_t* mqtt_client);
 
 #endif //DIPLOM_ESP32_MQTT_ESP_H

@@ -25,7 +25,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     switch ((esp_mqtt_event_id_t)event_id) {
         case MQTT_EVENT_CONNECTED:
             ESP_LOGI(TAG_MQTT, "MQTT_EVENT_CONNECTED");
-            esp_mqtt_client_publish(client, "urdmitriy/data", "data_init", 0, 1, 0);
+//            esp_mqtt_client_publish(client, "urdmitriy/data", "data_init", 0, 1, 0);
 //            ESP_LOGI(TAG_MQTT, "sent publish successful, msg_id=%d", msg_id);
 //            msg_id = esp_mqtt_client_subscribe(client, "urdmitriy/data", 0);
 //            ESP_LOGI(TAG_MQTT, "sent subscribe successful, msg_id=%d", msg_id);
@@ -66,16 +66,16 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
     }
 }
 
-void mqtt_app_start(void)
+void mqtt_app_start(esp_mqtt_client_handle_t* _mqtt_client)
 {
     esp_mqtt_client_config_t mqtt_cfg = {
             .broker.address.uri = "mqtt://erinaceto.ru",
             .broker.address.port = 1883,
-            .credentials.authentication.password = "secret",
-            .credentials.username = "secret",
+            .credentials.authentication.password = "qwope354F",
+            .credentials.username = "user",
     };
 
-    //_mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
-    //esp_mqtt_client_register_event(_mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
-    //esp_mqtt_client_start(_mqtt_client);
+    *_mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
+    esp_mqtt_client_register_event(*_mqtt_client, ESP_EVENT_ANY_ID, mqtt_event_handler, NULL);
+    esp_mqtt_client_start(*_mqtt_client);
 }

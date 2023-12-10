@@ -11,34 +11,36 @@
 
 #define PIN_SENSOR 9
 
+esp_mqtt_client_handle_t mqtt_client;
+
 void app_main(void)
 {
 
     leds_init();
 
-//    //Initialize NVS
-//    esp_err_t ret = nvs_flash_init();
-//    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-//        ESP_ERROR_CHECK(nvs_flash_erase());
-//        ret = nvs_flash_init();
-//    }
-//    ESP_ERROR_CHECK(ret);
-//
-//    wifi_init_sta();
-//
-//    esp_log_level_set("*", ESP_LOG_INFO);
-//    esp_log_level_set("mqtt_client", ESP_LOG_VERBOSE);
-//    esp_log_level_set("MQTT_EXAMPLE", ESP_LOG_VERBOSE);
-//    esp_log_level_set("TRANSPORT_BASE", ESP_LOG_VERBOSE);
-//    esp_log_level_set("esp-tls", ESP_LOG_VERBOSE);
-//    esp_log_level_set("TRANSPORT", ESP_LOG_VERBOSE);
-//    esp_log_level_set("outbox", ESP_LOG_VERBOSE);
-//
-//    ESP_ERROR_CHECK(esp_netif_init());
-//
-//    mqtt_app_start();
+    //Initialize NVS
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
 
-    dht11_init(PIN_SENSOR);
+    wifi_init_sta();
+
+    esp_log_level_set("*", ESP_LOG_INFO);
+    esp_log_level_set("mqtt_client", ESP_LOG_VERBOSE);
+    esp_log_level_set("MQTT_EXAMPLE", ESP_LOG_VERBOSE);
+    esp_log_level_set("TRANSPORT_BASE", ESP_LOG_VERBOSE);
+    esp_log_level_set("esp-tls", ESP_LOG_VERBOSE);
+    esp_log_level_set("TRANSPORT", ESP_LOG_VERBOSE);
+    esp_log_level_set("outbox", ESP_LOG_VERBOSE);
+
+    ESP_ERROR_CHECK(esp_netif_init());
+
+    mqtt_app_start(&mqtt_client);
+
+    dht11_init(PIN_SENSOR, &mqtt_client);
     dht11_start_task();
 
     while (1){ ; }
