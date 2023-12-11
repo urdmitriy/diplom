@@ -41,13 +41,13 @@ void dht11_vTask_read(void * pvParameters )
                 (uint8_t)(data_sensor.temperature>>8)+
                 (uint8_t)(data_sensor.temperature & 0x00FF) +
                 (uint8_t)(data_sensor.humidity>>8);
-        ESP_LOGI("ESP RESULT", "Temperature: %d.%d, humidity: %d.%d, crc: %d, crc calc: %d.",
+        ESP_LOGI("DHT11", "Temperature: %d.%d, humidity: %d.%d, crc: %d, crc calc: %d.",
                  data_sensor.temperature>>8, data_sensor.temperature & 0x00FF, data_sensor.humidity>>8,
                  data_sensor.humidity & 0x00FF, data_sensor.crc, crc_calc);
         char message[50];
-        sprintf(message, "%d", data_sensor.temperature>>8);
+        sprintf(message, "%d.%d", data_sensor.temperature>>8, (uint8_t)(data_sensor.temperature & 0x00FF));
         esp_mqtt_client_publish(*_mqtt_client, "urdmitriy/temperature",  message, 0, 1, 0);
-        sprintf(message, "%d", data_sensor.humidity>>8);
+        sprintf(message, "%d.%d", data_sensor.humidity>>8, (uint8_t)(data_sensor.humidity & 0x00FF));
         esp_mqtt_client_publish(*_mqtt_client, "urdmitriy/humidity",  message, 0, 1, 0);
         sprintf(message, "%d", crc_calc);
         esp_mqtt_client_publish(*_mqtt_client, "urdmitriy/crc",  message, 0, 1, 0);
@@ -77,8 +77,8 @@ void dht11_read(data_sensor_t* data) {
     while (gpio_get_level(_pin_sensor) == 1); //Data begin
     while (gpio_get_level(_pin_sensor) == 0); //First bit begin
 
-    for (int i = 0; i < 5; i+=2) {
-        for (int j = 2; j > 0 ; ++j) {
+    for (int i = 0; i <= 4; i+=2) {
+        for (int j = 2; j > 0 ; --j) {
             for (int k = 0; k < 8; ++k) {
                 timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &time_start);
                 while (gpio_get_level(_pin_sensor) == 1);
