@@ -3,7 +3,6 @@
 //
 
 #include <stdio.h>
-#include "leds.h"
 #include "mqtt_esp.h"
 #include "dht11.h"
 #include "driver/gpio.h"
@@ -36,7 +35,6 @@ void dht11_vTask_read(void * pvParameters )
     for( ;; )
     {
         dht11_read(&data_sensor);
-        leds_flash(LED_YELLOW, 100);
         uint8_t crc_calc =
                 (uint8_t)(data_sensor.temperature>>8)+
                 (uint8_t)(data_sensor.temperature & 0x00FF) +
@@ -44,13 +42,15 @@ void dht11_vTask_read(void * pvParameters )
         ESP_LOGI("DHT11", "Temperature: %d.%d, humidity: %d.%d, crc: %d, crc calc: %d.",
                  data_sensor.temperature>>8, data_sensor.temperature & 0x00FF, data_sensor.humidity>>8,
                  data_sensor.humidity & 0x00FF, data_sensor.crc, crc_calc);
-        char message[50];
-        sprintf(message, "%d.%d", data_sensor.temperature>>8, (uint8_t)(data_sensor.temperature & 0x00FF));
-        esp_mqtt_client_publish(*_mqtt_client, "urdmitriy/temperature",  message, 0, 1, 0);
-        sprintf(message, "%d.%d", data_sensor.humidity>>8, (uint8_t)(data_sensor.humidity & 0x00FF));
-        esp_mqtt_client_publish(*_mqtt_client, "urdmitriy/humidity",  message, 0, 1, 0);
-        sprintf(message, "%d", crc_calc);
-        esp_mqtt_client_publish(*_mqtt_client, "urdmitriy/crc",  message, 0, 1, 0);
+
+        char message[500];
+
+        sprintf(message, "<temperature>%d.%d</temperature>,<humidity>%d.%d</humidity>",
+                data_sensor.temperature>>8, (uint8_t)(data_sensor.temperature & 0x00FF),
+                data_sensor.humidity>>8, (uint8_t)(data_sensor.humidity & 0x00FF));
+
+        esp_mqtt_client_publish(*_mqtt_client, "urdmitriy/data",  message, 0, 1, 0);
+
         vTaskDelay(pdMS_TO_TICKS(2000));
     }
 }
@@ -66,7 +66,7 @@ void dht11_read(data_sensor_t* data) {
 
     gpio_set_direction(_pin_sensor, GPIO_MODE_OUTPUT);
     gpio_set_level(_pin_sensor, 0);
-    vTaskDelay(pdMS_TO_TICKS(20)); // стартовый импульс
+    vTaskDelay(pdMS_TO_TICKS(20));
     gpio_set_level(_pin_sensor, 1);
     gpio_set_direction(_pin_sensor, GPIO_MODE_INPUT);
 
@@ -85,7 +85,7 @@ void dht11_read(data_sensor_t* data) {
                 timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &time_stop);
                 time_delta = time_stop - time_start;
 
-                if (time_delta > 40) { //Если импульс данных длиннее 40 (26-28) мкс, то бит = 1
+                if (time_delta > 40) {
                     *(((uint8_t *) data) + i + j - 1) |= (1 << (7 - k));
                 }
                 if (i + j == 6) {
