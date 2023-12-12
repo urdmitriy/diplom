@@ -18,7 +18,7 @@ static esp_mqtt_client_handle_t* _mqtt_client;
 
 void dht11_vTask_read(void * pvParameters );
 void dht11_init(int pin_sensor, esp_mqtt_client_handle_t* mqtt_client);
-void dht11_start_task(void);
+void dht11_start_task(void );
 void dht11_read(data_sensor_t *data);
 
 

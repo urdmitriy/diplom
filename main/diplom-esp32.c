@@ -13,6 +13,8 @@ esp_mqtt_client_handle_t mqtt_client;
 
 void app_main(void)
 {
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+
     leds_init();
 
     esp_err_t ret = nvs_flash_init();
@@ -29,7 +31,6 @@ void app_main(void)
     mqtt_app_start(&mqtt_client);
 
     dht11_init(PIN_SENSOR, &mqtt_client);
-
 
     while (1){ ; }
 }

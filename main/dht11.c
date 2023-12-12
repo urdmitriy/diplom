@@ -11,6 +11,8 @@
 #include "freertos/task.h"
 #include "esp_log.h"
 
+#define MAX_TIME_SENSOR_WAIT_US 10000
+
 void dht11_init(int pin_sensor, esp_mqtt_client_handle_t* mqtt_client) {
     _pin_sensor = pin_sensor;
     _mqtt_client = mqtt_client;
@@ -57,7 +59,7 @@ void dht11_vTask_read(void * pvParameters )
 
 void dht11_read(data_sensor_t* data) {
 
-    uint64_t time_start, time_stop, time_delta;
+    uint64_t time_start, time_stop, time_delta, time_read_begin, current_time;
     portMUX_TYPE my_spinlock = portMUX_INITIALIZER_UNLOCKED;
 
     data->humidity = 0;
@@ -72,16 +74,29 @@ void dht11_read(data_sensor_t* data) {
 
     taskENTER_CRITICAL(&my_spinlock);
 
-    while (gpio_get_level(_pin_sensor) == 1); //answer begin
-    while (gpio_get_level(_pin_sensor) == 0); //Answer end, DHT pull up voltage
-    while (gpio_get_level(_pin_sensor) == 1); //Data begin
-    while (gpio_get_level(_pin_sensor) == 0); //First bit begin
+    timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &time_read_begin);
+    timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &current_time);
+
+    while (gpio_get_level(_pin_sensor) == 1 && current_time - time_read_begin < MAX_TIME_SENSOR_WAIT_US){
+        timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &current_time);
+    } //answer begin
+    while (gpio_get_level(_pin_sensor) == 0 && current_time - time_read_begin < MAX_TIME_SENSOR_WAIT_US){
+        timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &current_time);
+    }; //Answer end, DHT pull up voltage
+    while (gpio_get_level(_pin_sensor) == 1 && current_time - time_read_begin < MAX_TIME_SENSOR_WAIT_US){
+        timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &current_time);
+    }; //Data begin
+    while (gpio_get_level(_pin_sensor) == 0 && current_time - time_read_begin < MAX_TIME_SENSOR_WAIT_US){
+        timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &current_time);
+    }; //First bit begin
 
     for (int i = 0; i <= 4; i+=2) {
         for (int j = 2; j > 0 ; --j) {
             for (int k = 0; k < 8; ++k) {
                 timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &time_start);
-                while (gpio_get_level(_pin_sensor) == 1);
+                while (gpio_get_level(_pin_sensor) == 1 && current_time - time_read_begin < MAX_TIME_SENSOR_WAIT_US){
+                    timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &current_time);
+                };
                 timer_get_counter_value(TIMER_GROUP_0, TIMER_0, &time_stop);
                 time_delta = time_stop - time_start;
 
