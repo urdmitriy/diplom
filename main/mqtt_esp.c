@@ -7,6 +7,7 @@
 #include "esp_log.h"
 #include "dht11.h"
 #include "leds.h"
+#include "driver/gpio.h"
 
 static const char *TAG_MQTT = "MQTT_EXAMPLE";
 
@@ -29,7 +30,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             dht11_start_task();
 //            esp_mqtt_client_publish(client, "urdmitriy/data", "data_init", 0, 1, 0);
 //            ESP_LOGI(TAG_MQTT, "sent publish successful, msg_id=%d", msg_id);
-//            msg_id = esp_mqtt_client_subscribe(client, "urdmitriy/data", 0);
+            msg_id = esp_mqtt_client_subscribe(client, "urdmitriy/onpayload", 0);
 //            ESP_LOGI(TAG_MQTT, "sent subscribe successful, msg_id=%d", msg_id);
             break;
         case MQTT_EVENT_DISCONNECTED:
@@ -50,7 +51,12 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             ESP_LOGI(TAG_MQTT, "MQTT_EVENT_DATA");
             printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
             printf("DATA=%.*s\r\n", event->data_len, event->data);
-            leds_flash(LED_GREEN, 200);
+            leds_flash(LED_GREEN, 100);
+            if (event->data[0] == '1') {
+                gpio_set_level(LED_WHITE, 1);
+            } else if (event->data[0] == '0'){
+                gpio_set_level(LED_WHITE, 0);
+            }
             break;
         case MQTT_EVENT_ERROR:
             ESP_LOGI(TAG_MQTT, "MQTT_EVENT_ERROR");

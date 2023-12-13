@@ -47,7 +47,7 @@ void dht11_vTask_read(void * pvParameters )
 
         char message[500];
 
-        sprintf(message, "<temperature>%d.%d</temperature>,<humidity>%d.%d</humidity>",
+        sprintf(message, "{\"Temperature\":\"%d.%d\", \"Humidity\":\"%d.%d\"}",
                 data_sensor.temperature>>8, (uint8_t)(data_sensor.temperature & 0x00FF),
                 data_sensor.humidity>>8, (uint8_t)(data_sensor.humidity & 0x00FF));
 
